@@ -92,6 +92,14 @@ export interface NodePgStorageConfig {
 
 const SEVEN_DAYS_MS = 7 * 24 * 60 * 60 * 1000;
 
+// PostgreSQL owns session liveness. Both session timestamp columns are
+// `timestamp without time zone` strings for compatibility with the existing
+// public schema, so parsing driver-rendered text in JavaScript would make
+// DateStyle and process TZ part of authentication correctness. Compare the
+// authoritative expires_at column to the database's UTC wall clock instead.
+const SESSION_IS_LIVE = sql`${schema.sessions.expiresAt} > (now() at time zone 'utc')`;
+const SESSION_IS_EXPIRED = sql`${schema.sessions.expiresAt} <= (now() at time zone 'utc')`;
+
 // ---------------------------------------------------------------------------
 // Row → Domain mappers (pure transforms, tenant-scoped)
 // ---------------------------------------------------------------------------
@@ -422,22 +430,18 @@ export class PgStorageAdapter {
     const rows = await this.db
       .select()
       .from(schema.sessions)
-      .where(and(eq(schema.sessions.tenantId, tenantId), eq(schema.sessions.id, id)))
+      .where(
+        and(
+          eq(schema.sessions.tenantId, tenantId),
+          eq(schema.sessions.id, id),
+          SESSION_IS_LIVE,
+        ),
+      )
       .limit(1);
-
-    if (!rows[0]) return null;
-
-    const session = toSession(rows[0]);
-    if (new Date(session.expires) < new Date()) {
-      await this.deleteSession(tenantId, id);
-      return null;
-    }
-
-    return session;
+    return rows[0] ? toSession(rows[0]) : null;
   }
 
   async getSessionsByUser(tenantId: string, userId: string): Promise<TenantScoped<Session>[]> {
-    const now = new Date().toISOString();
     const rows = await this.db
       .select()
       .from(schema.sessions)
@@ -445,7 +449,7 @@ export class PgStorageAdapter {
         and(
           eq(schema.sessions.tenantId, tenantId),
           eq(schema.sessions.userId, userId),
-          gt(schema.sessions.expires, now),
+          SESSION_IS_LIVE,
         ),
       );
 
@@ -453,14 +457,13 @@ export class PgStorageAdapter {
   }
 
   async getAllSessions(tenantId: string): Promise<TenantScoped<Session>[]> {
-    const now = new Date().toISOString();
     const rows = await this.db
       .select()
       .from(schema.sessions)
       .where(
         and(
           eq(schema.sessions.tenantId, tenantId),
-          gt(schema.sessions.expires, now),
+          SESSION_IS_LIVE,
         ),
       );
 
@@ -561,13 +564,12 @@ export class PgStorageAdapter {
   }
 
   async cleanupExpiredSessions(tenantId: string): Promise<number> {
-    const now = new Date().toISOString();
     const deleted = await this.db
       .delete(schema.sessions)
       .where(
         and(
           eq(schema.sessions.tenantId, tenantId),
-          lt(schema.sessions.expires, now),
+          SESSION_IS_EXPIRED,
         ),
       )
       .returning({ id: schema.sessions.id });

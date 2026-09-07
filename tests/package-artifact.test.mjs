@@ -14,6 +14,7 @@ assert.deepEqual(manifest.peerDependencies, {
 assert.equal(manifest.dependencies?.['@tummycrypt/tinyland-auth'], undefined);
 assert.equal(manifest.devDependencies, undefined);
 assert.equal(manifest.scripts, undefined);
+assert.equal(manifest.publishConfig, undefined);
 await assert.rejects(access(resolve(packageRoot, 'node_modules')));
 
 const requiredPaths = [

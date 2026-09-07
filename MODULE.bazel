@@ -12,7 +12,7 @@ bazel_dep(name = "platforms", version = "1.0.0")
 bazel_dep(name = "rules_nodejs", version = "6.7.3")
 
 # Source/type authority comes from the immutable module in the Tinyland registry.
-bazel_dep(name = "tummycrypt_tinyland_auth", version = "0.3.0")
+bazel_dep(name = "tummycrypt_tinyland_auth", version = "0.3.3")
 
 node = use_extension("@rules_nodejs//nodejs:extensions.bzl", "node")
 node.toolchain(node_version = "22.13.1")

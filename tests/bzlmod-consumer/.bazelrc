@@ -1,5 +1,5 @@
 common --enable_bzlmod
-common --registry=https://raw.githubusercontent.com/tinyland-inc/bazel-registry/main
+common --registry=https://raw.githubusercontent.com/tinyland-inc/bazel-registry/ef734c4a26045a7b396913e6cf410e50fbe16635
 common --registry=https://bcr.bazel.build
 common --legacy_external_runfiles
 common --lockfile_mode=off

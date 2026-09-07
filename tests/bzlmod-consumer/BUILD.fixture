@@ -12,7 +12,7 @@ npm_package(
     include_external_repositories = ["tummycrypt_tinyland_auth+"],
     package = "@tummycrypt/tinyland-auth",
     root_paths = ["pkg"],
-    version = "0.3.0",
+    version = "0.3.3",
 )
 
 npm_link_package(

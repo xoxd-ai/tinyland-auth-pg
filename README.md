@@ -1,6 +1,6 @@
 # @tummycrypt/tinyland-auth-pg
 
-PostgreSQL storage adapter for [@tummycrypt/tinyland-auth](https://github.com/Jesssullivan/tinyland-auth), backed by [Drizzle ORM](https://orm.drizzle.team) with driver-agnostic construction and multi-tenant scoping.
+PostgreSQL storage adapter for [@tummycrypt/tinyland-auth](https://github.com/tinyland-inc/tinyland-auth), backed by [Drizzle ORM](https://orm.drizzle.team) with driver-agnostic construction and multi-tenant scoping.
 
 Supports Neon HTTP, `postgres.js`, and `node-postgres`. Use `createNodePgStorageAdapter()`
 when you want the package to own a `pg.Pool`, or `createPgStorageAdapter({ db })`
@@ -21,7 +21,7 @@ registry entry lands. The coordinates for this release candidate are:
 
 ```starlark
 bazel_dep(name = "tummycrypt_tinyland_auth_pg", version = "0.2.5")
-bazel_dep(name = "tummycrypt_tinyland_auth", version = "0.3.0")
+bazel_dep(name = "tummycrypt_tinyland_auth", version = "0.3.3")
 ```
 
 First-party Bazel consumers link both
@@ -32,21 +32,17 @@ consumer.
 
 Repository source builds do not resolve `@tummycrypt/tinyland-auth` through
 npm, GitHub Packages, workspace protocols, or file links. Bazel resolves the
-exact `tummycrypt_tinyland_auth@0.3.0` module, consumes
+exact `tummycrypt_tinyland_auth@0.3.3` module, consumes
 `@tummycrypt_tinyland_auth//:pkg`, and links explicit third-party runtime
 stores.
 
-### Optional GitHub Packages artifact
+### Release authority
 
-The release workflow may additionally publish a compatibility artifact only to
-GitHub Packages. The reusable publisher rewrites a temporary copy from the
-Bazel package identity `@tummycrypt/tinyland-auth-pg` to the exact GitHub
-Packages identity `@tinyland-inc/tinyland-auth-pg`. This repository does not
-claim that a compatibility version exists until that workflow succeeds.
-
-npmjs publication is disabled and requires a separate operator decision before
-it can be enabled. In particular, this repository does not claim an npmjs
-`@tummycrypt/tinyland-auth-pg@0.2.5` artifact.
+This repository publishes neither npmjs nor GitHub Packages artifacts. The
+central TIN-89 package workflow proves the Bazel package graph remotely. Only
+after exact-head proof may an operator create the signed immutable source tag;
+the reviewed, append-only `tinyland-inc/bazel-registry` entry makes that source
+release consumable.
 
 The emitted package manifest intentionally carries
 `@tummycrypt/tinyland-auth@^0.3.0` as peer compatibility metadata. That peer
@@ -278,6 +274,11 @@ Every method accepts `tenantId: string` as its **first parameter** and returns
 - `getAllSessions(tenantId): Promise<TenantScoped<Session>[]>`
 - `cleanupExpiredSessions(tenantId): Promise<number>`
 
+Session liveness is evaluated in PostgreSQL from `expires_at` against the
+database's UTC clock. Read methods never delete rows and never parse
+driver-rendered timestamps in JavaScript; invoke `cleanupExpiredSessions`
+explicitly when expired-row removal is desired.
+
 #### TOTP / Backup Codes
 - `saveTOTPSecret(tenantId, handle, secret): Promise<void>`
 - `getTOTPSecret(tenantId, handle): Promise<EncryptedTOTPSecret | null>`
@@ -302,7 +303,7 @@ Every method accepts `tenantId: string` as its **first parameter** and returns
 
 > **Interface note:** `IStorageAdapter` is the single-tenant Pattern A shape.
 > `PgStorageAdapter` exposes the tenant-scoped Pattern B shape supported by
-> `@tummycrypt/tinyland-auth@0.3.0`; use the upstream fixed-tenant wrapper when a
+> `@tummycrypt/tinyland-auth@0.3.3`; use the upstream fixed-tenant wrapper when a
 > Pattern A consumer needs to bind this adapter to one tenant.
 
 ### `NodePgStorageAdapter`
@@ -334,9 +335,10 @@ just package-check
 The package-manager manifest and lock intentionally contain no first-party
 source edge.
 
-`just package-check` also runs the external Bzlmod consumer proof. It links the
-auth and auth-pg package trees from their Bazel module labels and executes a
-runtime import without fetching auth from npm or GitHub Packages.
+The checked-in `tests/bzlmod-consumer` fixture records the expected external
+link shape for auth and auth-pg. Actual registry/archive consumption is a
+post-tag, post-BCR remote release gate; this source branch does not substitute a
+local-path build for that receipt.
 
 The Nix flake supplies the pinned development shell only. The former Nix
 package derivation used a second pnpm/tsc build path, so it was removed rather

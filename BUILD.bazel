@@ -23,7 +23,7 @@ npm_package(
     include_external_repositories = ["tummycrypt_tinyland_auth+"],
     package = "@tummycrypt/tinyland-auth",
     root_paths = ["pkg"],
-    version = "0.3.0",
+    version = "0.3.3",
 )
 
 npm_link_package(
@@ -51,7 +51,7 @@ PACKAGE_AUTHORITY_DATA = [
     ":node_modules",
     ":node_modules/vitest",
     ".bazelrc",
-    ".github/workflows/publish.yml",
+    ".github/workflows/ci.yml",
     "BUILD.bazel",
     "CHANGELOG.md",
     "Justfile",
@@ -94,7 +94,13 @@ ts_project(
 
 vitest_bin.vitest_test(
     name = "test",
-    args = ["run"],
+    args = [
+        "run",
+        "--exclude",
+        "src/__tests__/node-pg.test.ts",
+        "--exclude",
+        "src/__tests__/postgres-js.test.ts",
+    ],
     data = glob([
         "drizzle/**",
         "drizzle-public/**",
@@ -113,6 +119,31 @@ vitest_bin.vitest_test(
         "tsconfig.json",
         "vitest.config.ts",
     ],
+    log_level = "info",
+)
+
+# The database behavior proof is its own graph node. It may skip for a local
+# developer without a container runtime, but the remote validation target sets
+# AUTH_PG_INTEGRATION_REQUIRED and therefore fails closed if PostgreSQL cannot
+# actually be started.
+vitest_bin.vitest_test(
+    name = "integration_test",
+    args = [
+        "run",
+        "$(rootpath src/__tests__/node-pg.test.ts)",
+        "$(rootpath src/__tests__/postgres-js.test.ts)",
+    ],
+    data = glob([
+        "drizzle/**",
+        "drizzle-public/**",
+        "src/**/*.ts",
+    ]) + [
+        ":node_modules",
+        ":node_modules/@tummycrypt/tinyland-auth",
+        "tsconfig.json",
+        "vitest.config.ts",
+    ],
+    env = {"AUTH_PG_INTEGRATION_REQUIRED": "true"},
     log_level = "info",
 )
 
@@ -168,17 +199,5 @@ js_test(
     entry_point = "tests/auth-runtime-link.test.mjs",
     data = [
         ":node_modules/@tummycrypt/tinyland-auth",
-    ],
-)
-
-js_test(
-    name = "release_contract_test",
-    entry_point = "tests/release-contract.test.mjs",
-    data = [
-        ".github/workflows/publish.yml",
-        "BUILD.bazel",
-        "MODULE.bazel",
-        "package.json",
-        "scripts/release-contract.mjs",
     ],
 )

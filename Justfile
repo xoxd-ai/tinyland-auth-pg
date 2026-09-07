@@ -2,7 +2,7 @@ set shell := ["bash", "-euo", "pipefail", "-c"]
 
 root := justfile_directory()
 build_targets := "//:tinyland-auth-pg //:typecheck //:pkg"
-test_targets := "//:test //:package_authority_test //:package_artifact_test //:auth_runtime_link_test //:release_contract_test"
+test_targets := "//:test //:integration_test //:package_authority_test //:package_artifact_test //:auth_runtime_link_test"
 
 default:
     @just --list --unsorted
@@ -23,17 +23,8 @@ clean:
     cd {{ root }} && rm -rf dist
 
 publish-guard:
-    @echo "Refusing source-tree publication; publish the validated Bazel //:pkg artifact through the release workflow." >&2
+    @echo "Refusing package-registry publication; release only by signed source tag plus reviewed BCR entry after remote graph proof." >&2
     @exit 1
-
-release-contract:
-    cd {{ root }} && node scripts/release-contract.mjs
-
-release-contract-test:
-    cd {{ root }} && bazelisk test //:release_contract_test --test_output=errors
-
-bzlmod-consumer-proof:
-    cd {{ root }} && node scripts/bzlmod-consumer-proof.mjs
 
 bazel-graph:
     cd {{ root }} && bazelisk mod graph
@@ -59,12 +50,12 @@ test-unit:
 test: test-unit
 
 package-authority:
-    cd {{ root }} && bazelisk test //:package_authority_test //:release_contract_test --test_output=errors
+    cd {{ root }} && bazelisk test //:package_authority_test --test_output=errors
 
 package-smoke:
     cd {{ root }} && bazelisk test //:package_artifact_test //:auth_runtime_link_test --test_output=errors
 
-package-check: package package-smoke bzlmod-consumer-proof
+package-check: package package-smoke
     cd {{ root }} && pnpm exec publint bazel-bin/pkg
 
 db-generate:

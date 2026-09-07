@@ -8,30 +8,15 @@ on:
   workflow_dispatch:
 
 permissions:
-  actions: read
   contents: read
-  packages: read
 
 jobs:
   package:
-    uses: tinyland-inc/ci-templates/.github/workflows/js-bazel-package.yml@61cd1338ca9dae8a25985c0a36ff7beb111449be
+    # Exact-head TIN-89 canary. Replace this with the signed immutable v4
+    # release commit before merging; never fall back to the v3 publisher lane.
+    uses: tinyland-inc/ci-templates/.github/workflows/js-bazel-package.yml@6244d36f3048cf93672a8f37a873ec2db2cb09a3
     with:
       runner_mode: repo_owned
       runner_labels_json: ${{ vars.PRIMARY_LINUX_RUNNER_LABELS_JSON }}
-      workspace_mode: isolated
-      publish_mode: hosted_exception
-      node_versions: '["22"]'
-      publish_node_version: "22"
-      pnpm_version: "10.13.1"
-      metadata_check_command: nix develop --command just package-authority
-      typecheck_command: nix develop --command just typecheck
-      unit_test_command: nix develop --command just test-unit
-      build_command: nix develop --command just build
-      package_check_command: nix develop --command just package-check
-      bazel_targets: "//:pkg //:typecheck //:test //:package_authority_test //:package_artifact_test //:auth_runtime_link_test //:release_contract_test"
-      package_dir: ./bazel-bin/pkg
-      npm_access: public
-      npm_publish_mode: disabled
-      github_package_name: "@tinyland-inc/tinyland-auth-pg"
-      dry_run: true
-    secrets: inherit
+      bazel_targets: "//:pkg //:typecheck //:test //:integration_test //:package_authority_test //:package_artifact_test //:auth_runtime_link_test"
+      verify_bzlmod_lock: true

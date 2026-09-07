@@ -13,9 +13,6 @@
     "type": "git",
     "url": "git+https://github.com/tinyland-inc/tinyland-auth-pg.git"
   },
-  "publishConfig": {
-    "access": "public"
-  },
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",

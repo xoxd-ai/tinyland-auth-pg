@@ -4,12 +4,12 @@ All notable changes to `@tummycrypt/tinyland-auth-pg` will be documented here.
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 this package uses pre-1.0 semver where **breaking changes bump the minor**.
 
-## [0.2.5] - 2026-07-15
+## [0.2.5] - Unreleased
 
 ### Changed
 
 - Resolve `@tummycrypt/tinyland-auth` source and types exclusively from the
-  exact `tummycrypt_tinyland_auth@0.3.0` Bzlmod dependency in
+  exact `tummycrypt_tinyland_auth@0.3.3` Bzlmod dependency in
   `tinyland-inc/bazel-registry`, then rewrap `//:pkg` with consumer-owned,
   lock-derived third-party stores instead of an npm peer/development edge.
 - Generate the compatibility manifest under Bazel so its intentional
@@ -17,12 +17,11 @@ this package uses pre-1.0 semver where **breaking changes bump the minor**.
   first-party package-manager build edge. Canonical consumption remains the
   `tummycrypt_tinyland_auth_pg` Bzlmod module.
 - Route compile, typecheck, tests, and package assembly through finite Bazel
-  targets. Non-dry publication now requires the triggering tag/ref to match the
-  manifest, module, and Bazel package version before the publisher job starts.
-- Keep npmjs publication disabled. The optional GitHub Packages compatibility
-  artifact is rewritten at publish time to
-  `@tinyland-inc/tinyland-auth-pg`; no npmjs
-  `@tummycrypt/tinyland-auth-pg@0.2.5` artifact is claimed.
+  targets. The module, source manifest, package target, and eventual signed tag
+  must carry one version before a BCR append is proposed.
+- Remove npmjs and GitHub Packages publication from the active lane. A signed
+  source tag becomes consumable only through a reviewed, append-only
+  `tinyland-inc/bazel-registry` entry after exact-head remote graph proof.
 - Retire the alternate Nix pnpm/tsc package derivation; the flake now supplies
   only the reproducible development shell for the Bazel authority.
 
@@ -30,8 +29,19 @@ this package uses pre-1.0 semver where **breaking changes bump the minor**.
 
 - Contract coverage for package identity/version parity, first-party
   package-manager edge rejection, the explicit Node runtime-store closure,
-  auth runtime resolution, an external Bzlmod consumer, release-ref rejection,
-  and both packaged SQL migration trees.
+  auth runtime resolution, the external-consumer fixture, CI publication
+  prohibition, and both packaged SQL migration trees.
+
+### Fixed
+
+- Make PostgreSQL's UTC clock and `expires_at` column authoritative for every
+  session-read path. Reads no longer parse driver-rendered naive timestamps or
+  delete expired rows; the explicit, tenant-scoped janitor alone deletes rows,
+  including the exact expiry boundary.
+- Add destructive DateStyle, process-timezone, client-clock, exact-boundary,
+  tenant-isolation, and node-postgres/postgres.js parity coverage against real
+  PostgreSQL. The remote graph has a dedicated integration target that refuses
+  to turn missing container infrastructure into a green skip.
 
 ## [0.2.4] — 2026-04-28
 

@@ -4,10 +4,13 @@ import { describe, expect, it } from 'vitest';
 const readText = (path: string) => readFile(path, 'utf8');
 const IN_HOUSE_SCOPES = ['@tummycrypt/', '@tinyland/'] as const;
 const AUTH_MODULE = 'tummycrypt_tinyland_auth';
-const AUTH_VERSION = '0.3.0';
+const AUTH_VERSION = '0.3.3';
+const REGISTRY_REVISION = 'ef734c4a26045a7b396913e6cf410e50fbe16635';
 const PRIVATE_REGISTRY =
-  'https://raw.githubusercontent.com/tinyland-inc/bazel-registry/main';
+  `https://raw.githubusercontent.com/tinyland-inc/bazel-registry/${REGISTRY_REVISION}`;
 const PUBLIC_REGISTRY = 'https://bcr.bazel.build';
+const CI_TEMPLATES_CANARY =
+  'tinyland-inc/ci-templates/.github/workflows/js-bazel-package.yml@6244d36f3048cf93672a8f37a873ec2db2cb09a3';
 
 const extractModuleBlock = (moduleBazel: string): string => {
   const moduleBlock = moduleBazel.match(/module\(([\s\S]*?)\)/);
@@ -138,6 +141,12 @@ describe('package release authority', () => {
       `common --registry=${PRIVATE_REGISTRY}`,
       `common --registry=${PUBLIC_REGISTRY}`,
     ]);
+    expect(bazelrc).toContain('common --lockfile_mode=error');
+    expect(
+      Object.keys(moduleLock.registryFileHashes ?? {}).some((path) =>
+        path.includes('tinyland-inc/bazel-registry/main/'),
+      ),
+    ).toBe(false);
 
     const authRegistryPrefix = `${PRIVATE_REGISTRY}/modules/${AUTH_MODULE}/${AUTH_VERSION}/`;
     const authRegistryEntries = Object.entries(moduleLock.registryFileHashes ?? {})
@@ -178,6 +187,7 @@ describe('package release authority', () => {
 
   it('rejects every first-party package-manager source edge', async () => {
     const packageJson = JSON.parse(await readText('package.json')) as Record<string, unknown>;
+    expect(packageJson.publishConfig).toBeUndefined();
 
     const packageManagerCoordinateFields = [
       'dependencies',
@@ -214,29 +224,32 @@ describe('package release authority', () => {
     }
   });
 
-  it('keeps the emitted peer as compatibility metadata instead of source authority', async () => {
-    const [buildBazel, readme, publishWorkflow] = await Promise.all([
+  it('keeps peer metadata non-authoritative and delegates CI to the central v4 graph carrier', async () => {
+    const [buildBazel, readme, ciWorkflow] = await Promise.all([
       readText('BUILD.bazel'),
       readText('README.md'),
-      readText('.github/workflows/publish.yml'),
+      readText('.github/workflows/ci.yml'),
     ]);
 
     expect(buildBazel).toContain(
       'filter = ".peerDependencies = {\\"@tummycrypt/tinyland-auth\\": \\"^0.3.0\\"} | del(.devDependencies, .scripts)"',
     );
     expect(readme).toContain('Canonical first-party consumption is the immutable');
-    expect(readme).toContain('`@tinyland-inc/tinyland-auth-pg`');
-    expect(readme).toContain('npmjs publication is disabled');
+    expect(readme).toContain('publishes neither npmjs nor GitHub Packages');
     expect(readme).toContain('peer compatibility metadata');
     expect(readme).not.toContain('npm install @tummycrypt/tinyland-auth-pg');
     expect(readme).not.toContain('pnpm add @tummycrypt/tinyland-auth-pg');
-    expect(publishWorkflow).toContain('npm_publish_mode: disabled');
-    expect(publishWorkflow).toContain(
-      'github_package_name: "@tinyland-inc/tinyland-auth-pg"',
+    expect(ciWorkflow).toContain(`uses: ${CI_TEMPLATES_CANARY}`);
+    expect(ciWorkflow).toContain('verify_bzlmod_lock: true');
+    expect(ciWorkflow).toContain('//:integration_test');
+    expect(ciWorkflow).not.toMatch(
+      /\b(?:publish_mode|npm_publish_mode|github_package_name|package_dir|dry_run):/,
     );
+    expect(ciWorkflow).not.toContain('packages: write');
+    expect(ciWorkflow).not.toContain('secrets: inherit');
   });
 
-  it('proves an external Bzlmod consumer links both first-party package trees', async () => {
+  it('records an external Bzlmod consumer with both first-party package links', async () => {
     const [consumerModule, consumerBuild] = await Promise.all([
       readText('tests/bzlmod-consumer/MODULE.bazel.template'),
       readText('tests/bzlmod-consumer/BUILD.fixture'),
