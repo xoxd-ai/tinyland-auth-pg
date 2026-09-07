@@ -1,0 +1,61 @@
+load("@aspect_rules_js//js:defs.bzl", "js_test")
+load("@aspect_rules_js//npm:defs.bzl", "npm_link_package", "npm_package")
+
+filegroup(
+    name = "auth_registry_files",
+    srcs = ["@tummycrypt_tinyland_auth//:pkg"],
+)
+
+npm_package(
+    name = "auth_registry_package",
+    srcs = [":auth_registry_files"],
+    include_external_repositories = ["tummycrypt_tinyland_auth+"],
+    package = "@tummycrypt/tinyland-auth",
+    root_paths = ["pkg"],
+    version = "0.3.3",
+)
+
+npm_link_package(
+    name = "node_modules/@tummycrypt/tinyland-auth",
+    deps = {
+        "@tummycrypt_tinyland_auth//:node_modules/bcryptjs": "bcryptjs",
+        "@tummycrypt_tinyland_auth//:node_modules/nanoid": "nanoid",
+        "@tummycrypt_tinyland_auth//:node_modules/otplib": "otplib",
+        "@tummycrypt_tinyland_auth//:node_modules/qrcode": "qrcode",
+    },
+    src = ":auth_registry_package",
+)
+
+filegroup(
+    name = "auth_pg_registry_files",
+    srcs = ["@tummycrypt_tinyland_auth_pg//:pkg"],
+)
+
+npm_package(
+    name = "auth_pg_registry_package",
+    srcs = [":auth_pg_registry_files"],
+    include_external_repositories = ["tummycrypt_tinyland_auth_pg+"],
+    package = "@tummycrypt/tinyland-auth-pg",
+    root_paths = ["pkg"],
+    version = "0.2.5",
+)
+
+npm_link_package(
+    name = "node_modules/@tummycrypt/tinyland-auth-pg",
+    deps = {
+        ":node_modules/@tummycrypt/tinyland-auth": "@tummycrypt/tinyland-auth",
+        "@tummycrypt_tinyland_auth_pg//:node_modules/@neondatabase/serverless": "@neondatabase/serverless",
+        "@tummycrypt_tinyland_auth_pg//:node_modules/drizzle-orm": "drizzle-orm",
+        "@tummycrypt_tinyland_auth_pg//:node_modules/pg": "pg",
+    },
+    src = ":auth_pg_registry_package",
+)
+
+js_test(
+    name = "consumer_test",
+    entry_point = "consumer.test.mjs",
+    data = [
+        ":node_modules/@tummycrypt/tinyland-auth",
+        ":node_modules/@tummycrypt/tinyland-auth-pg",
+    ],
+)

@@ -1,6 +1,6 @@
 # @tummycrypt/tinyland-auth-pg
 
-PostgreSQL storage adapter for [@tummycrypt/tinyland-auth](https://github.com/Jesssullivan/tinyland-auth), backed by [Drizzle ORM](https://orm.drizzle.team) with driver-agnostic construction and multi-tenant scoping.
+PostgreSQL storage adapter for [@tummycrypt/tinyland-auth](https://github.com/tinyland-inc/tinyland-auth), backed by [Drizzle ORM](https://orm.drizzle.team) with driver-agnostic construction and multi-tenant scoping.
 
 Supports Neon HTTP, `postgres.js`, and `node-postgres`. Use `createNodePgStorageAdapter()`
 when you want the package to own a `pg.Pool`, or `createPgStorageAdapter({ db })`
@@ -10,19 +10,45 @@ when you already have a pre-built Drizzle client.
 > as its first parameter. Every row-bearing table has `tenant_id uuid NOT NULL`.
 > See [`CHANGELOG.md`](./CHANGELOG.md#020--2026-04-17) for the full migration guide.
 
-## Installation
+## Consumption
 
-```bash
-npm install @tummycrypt/tinyland-auth-pg
-# or
-pnpm add @tummycrypt/tinyland-auth-pg
+### Bzlmod (canonical)
+
+Canonical first-party consumption is the immutable
+`tummycrypt_tinyland_auth_pg` module in
+`tinyland-inc/bazel-registry`. A version is consumable only after that exact
+registry entry lands. The coordinates for this release candidate are:
+
+```starlark
+bazel_dep(name = "tummycrypt_tinyland_auth_pg", version = "0.2.5")
+bazel_dep(name = "tummycrypt_tinyland_auth", version = "0.3.3")
 ```
 
-### Peer Dependencies
+First-party Bazel consumers link both
+`@tummycrypt_tinyland_auth_pg//:pkg` and
+`@tummycrypt_tinyland_auth//:pkg` into their Node package tree. The executable
+fixture in [`tests/bzlmod-consumer`](./tests/bzlmod-consumer) is the reference
+consumer.
 
-```bash
-npm install @tummycrypt/tinyland-auth
-```
+Repository source builds do not resolve `@tummycrypt/tinyland-auth` through
+npm, GitHub Packages, workspace protocols, or file links. Bazel resolves the
+exact `tummycrypt_tinyland_auth@0.3.3` module, consumes
+`@tummycrypt_tinyland_auth//:pkg`, and links explicit third-party runtime
+stores.
+
+### Release authority
+
+This repository publishes neither npmjs nor GitHub Packages artifacts. The
+central TIN-89 package workflow proves the Bazel package graph remotely. Only
+after exact-head proof may an operator create the signed immutable source tag;
+the reviewed, append-only `tinyland-inc/bazel-registry` entry makes that source
+release consumable.
+
+The emitted package manifest intentionally carries
+`@tummycrypt/tinyland-auth@^0.3.0` as peer compatibility metadata. That peer
+entry is not source, build, type, or runtime authority for this repository;
+those edges remain on the exact Bzlmod `@tummycrypt_tinyland_auth//:pkg`
+target. Source-tree publication is blocked.
 
 ## Quick Start (0.2.0+)
 
@@ -149,17 +175,17 @@ Push schema changes directly (development):
 
 ```bash
 # Auth schema
-DATABASE_URL="postgresql://..." pnpm db:push
+DATABASE_URL="postgresql://..." just db-push
 
 # Public schema (booking, content)
-DATABASE_URL="postgresql://..." npx drizzle-kit push --config=drizzle.public.config.ts
+DATABASE_URL="postgresql://..." just db-push-public
 ```
 
 Generate migration files (production):
 
 ```bash
-DATABASE_URL="postgresql://..." pnpm db:generate
-DATABASE_URL="postgresql://..." pnpm db:migrate
+DATABASE_URL="postgresql://..." just db-generate
+DATABASE_URL="postgresql://..." just db-migrate
 ```
 
 ## API Reference
@@ -248,6 +274,11 @@ Every method accepts `tenantId: string` as its **first parameter** and returns
 - `getAllSessions(tenantId): Promise<TenantScoped<Session>[]>`
 - `cleanupExpiredSessions(tenantId): Promise<number>`
 
+Session liveness is evaluated in PostgreSQL from `expires_at` against the
+database's UTC clock. Read methods never delete rows and never parse
+driver-rendered timestamps in JavaScript; invoke `cleanupExpiredSessions`
+explicitly when expired-row removal is desired.
+
 #### TOTP / Backup Codes
 - `saveTOTPSecret(tenantId, handle, secret): Promise<void>`
 - `getTOTPSecret(tenantId, handle): Promise<EncryptedTOTPSecret | null>`
@@ -270,11 +301,10 @@ Every method accepts `tenantId: string` as its **first parameter** and returns
 - `logAuditEvent(tenantId, event): Promise<void>`
 - `getAuditEvents(tenantId, filters?): Promise<AuditEvent[]>`
 
-> **Interface note:** the class does not `implements IStorageAdapter` from
-> `@tummycrypt/tinyland-auth@0.2.x` because the peer package predates Pattern B.
-> An interface uplift will ship with tinyland-auth 0.3.0 and this adapter will
-> re-implement it then. Until then, consume the concrete class or type against
-> the exported method signatures directly.
+> **Interface note:** `IStorageAdapter` is the single-tenant Pattern A shape.
+> `PgStorageAdapter` exposes the tenant-scoped Pattern B shape supported by
+> `@tummycrypt/tinyland-auth@0.3.3`; use the upstream fixed-tenant wrapper when a
+> Pattern A consumer needs to bind this adapter to one tenant.
 
 ### `NodePgStorageAdapter`
 
@@ -290,17 +320,32 @@ that pool by default when `adapter.close()` is called.
 ## Development
 
 ```bash
-pnpm install
-pnpm test          # Run tests
-pnpm build         # Compile TypeScript
-pnpm test:watch    # Watch mode
+nix develop
+just setup
+just check
+just build
+just typecheck
+just test
+just package-authority
+just package-check
 ```
 
-### Nix
+`MODULE.bazel` is the package version and first-party dependency authority;
+`package.json`, `BUILD.bazel`, and the packaged manifest must remain in parity.
+The package-manager manifest and lock intentionally contain no first-party
+source edge.
 
-```bash
-nix develop        # Enter dev shell with Node 20 + pnpm + tsc
-```
+The checked-in `tests/bzlmod-consumer` fixture records the expected external
+link shape for auth and auth-pg. Actual registry/archive consumption is a
+post-tag, post-BCR remote release gate; this source branch does not substitute a
+local-path build for that receipt.
+
+The Nix flake supplies the pinned development shell only. The former Nix
+package derivation used a second pnpm/tsc build path, so it was removed rather
+than retained as competing package authority.
+
+This is package/build authority only. It does not configure a remote cache,
+enroll an executor, or claim remote execution (RBE).
 
 ## License
 

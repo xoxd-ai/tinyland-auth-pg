@@ -11,9 +11,15 @@ function hasPodmanSocket(): boolean {
 }
 
 export function hasContainerRuntime(): boolean {
-	return Boolean(
+	const available = Boolean(
 		process.env.DOCKER_HOST ||
 			existsSync(dockerSocket) ||
 			hasPodmanSocket(),
 	);
+	if (!available && process.env.AUTH_PG_INTEGRATION_REQUIRED === 'true') {
+		throw new Error(
+			'AUTH_PG_INTEGRATION_REQUIRED=true but no Docker or Podman socket is available; refusing vacuous PostgreSQL evidence',
+		);
+	}
+	return available;
 }

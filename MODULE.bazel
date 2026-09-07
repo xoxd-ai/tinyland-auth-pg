@@ -1,6 +1,6 @@
 module(
     name = "tummycrypt_tinyland_auth_pg",
-    version = "0.2.4",
+    version = "0.2.5",
     compatibility_level = 1,
 )
 
@@ -10,6 +10,9 @@ bazel_dep(name = "aspect_rules_ts", version = "3.8.4")
 bazel_dep(name = "bazel_skylib", version = "1.8.2")
 bazel_dep(name = "platforms", version = "1.0.0")
 bazel_dep(name = "rules_nodejs", version = "6.7.3")
+
+# Source/type authority comes from the immutable module in the Tinyland registry.
+bazel_dep(name = "tummycrypt_tinyland_auth", version = "0.3.3")
 
 node = use_extension("@rules_nodejs//nodejs:extensions.bzl", "node")
 node.toolchain(node_version = "22.13.1")

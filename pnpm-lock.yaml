@@ -21,24 +21,33 @@ importers:
       '@testcontainers/postgresql':
         specifier: ^11.14.0
         version: 11.14.0
-      '@tummycrypt/tinyland-auth':
-        specifier: ^0.3.0
-        version: 0.3.0
       '@types/node':
         specifier: ^22.0.0
         version: 22.19.17
       '@types/pg':
         specifier: ^8.20.0
         version: 8.20.0
+      bcryptjs:
+        specifier: 2.4.3
+        version: 2.4.3
       drizzle-kit:
         specifier: ^0.30.5
         version: 0.30.6
+      nanoid:
+        specifier: 5.1.9
+        version: 5.1.9
+      otplib:
+        specifier: 12.0.1
+        version: 12.0.1
       postgres:
         specifier: ^3.4.9
         version: 3.4.9
       publint:
         specifier: ^0.3.18
         version: 0.3.18
+      qrcode:
+        specifier: 1.5.4
+        version: 1.5.4
       testcontainers:
         specifier: ^11.14.0
         version: 11.14.0
@@ -68,11 +77,11 @@ packages:
 
   '@esbuild-kit/core-utils@3.3.2':
     resolution: {integrity: sha512-sPRAnw9CdSsRmEtnsl2WXWdyquogVpB3yZ3dgwJfe8zrOzTsV7cJvmwrKVa+0ma5BoiGJ+BoqkMvawbayKUsqQ==}
-    deprecated: 'Merged into tsx: https://tsx.is'
+    deprecated: 'Merged into tsx: https://tsx.hirok.io'
 
   '@esbuild-kit/esm-loader@2.6.5':
     resolution: {integrity: sha512-FxEMIkJKnodyA1OaCUoEvbYRkoZlLZ4d/eXFu9Fh8CbBBgP5EmZxrfTRyN0qpXZ4vOvqnE5YdRdcrmUUXuU+dA==}
-    deprecated: 'Merged into tsx: https://tsx.is'
+    deprecated: 'Merged into tsx: https://tsx.hirok.io'
 
   '@esbuild/aix-ppc64@0.19.12':
     resolution: {integrity: sha512-bmoCYyWdEL3wDQIVbcyzRyeKLgk2WtWLTWz1ZIAZF/EGbNOwSA6ew3PftJ1PqMiOOGu0OyFMzG53L0zqIpPeNA==}
@@ -536,18 +545,6 @@ packages:
 
   '@testcontainers/postgresql@11.14.0':
     resolution: {integrity: sha512-wYbJn8GRTj8qfqzfVubxioYWlHJU/ImIjuzPwyy9C5Qfo6g3GLduPZAj+BifvqTZjgT3gd4gFVLCPhBji7dc1w==}
-
-  '@tummycrypt/tinyland-auth@0.3.0':
-    resolution: {integrity: sha512-RiDHH5EdhLS4uF2D/GEBAaVN3712E5Xtj9W4SnVycUE2BbVmIrCPTjif3vcHhwy0QmiwMNGKQWsRIXgHiMIcsw==}
-    engines: {node: '>=22.0.0'}
-    peerDependencies:
-      '@sveltejs/kit': ^2.0.0
-      svelte: ^5.0.0
-    peerDependenciesMeta:
-      '@sveltejs/kit':
-        optional: true
-      svelte:
-        optional: true
 
   '@tybys/wasm-util@0.10.1':
     resolution: {integrity: sha512-9tTaPJLSiejZKx+Bmog4uSubteqTvFrVrURwkmHixBo0G4seD0zUxp98E1DzUBJxLQ3NPwXrGKDiVjwx/DpPsg==}
@@ -1183,8 +1180,8 @@ packages:
     engines: {node: ^10 || ^12 || ^13.7 || ^14 || >=15.0.1}
     hasBin: true
 
-  nanoid@5.1.7:
-    resolution: {integrity: sha512-ua3NDgISf6jdwezAheMOk4mbE1LXjm1DfMUDMuJf4AqxLFK3ccGpgWizwa5YV7Yz9EpXwEaWoRXSb/BnV0t5dQ==}
+  nanoid@5.1.9:
+    resolution: {integrity: sha512-ZUvP7KeBLe3OZ1ypw6dI/TzYJuvHP77IM4Ry73waSQTLn8/g8rpdjfyVAh7t1/+FjBtG4lCP42MEbDxOsRpBMw==}
     engines: {node: ^18 || >=20}
     hasBin: true
 
@@ -1567,6 +1564,7 @@ packages:
 
   uuid@10.0.0:
     resolution: {integrity: sha512-8XkAphELsDnEGrDxUOHB3RGvXz6TeuYSGEZBOjtTtPm2lwhGBjLgOzLHB63IUWfBpNucQjND6d3AOudO+H3RWQ==}
+    deprecated: uuid@10 and below is no longer supported.  For ESM codebases, update to uuid@latest.  For CommonJS codebases, use uuid@11 (but be aware this version will likely be deprecated in 2028).
     hasBin: true
 
   vite@8.0.1:
@@ -2046,13 +2044,6 @@ snapshots:
       - bare-buffer
       - react-native-b4a
       - supports-color
-
-  '@tummycrypt/tinyland-auth@0.3.0':
-    dependencies:
-      bcryptjs: 2.4.3
-      nanoid: 5.1.7
-      otplib: 12.0.1
-      qrcode: 1.5.4
 
   '@tybys/wasm-util@0.10.1':
     dependencies:
@@ -2634,7 +2625,7 @@ snapshots:
 
   nanoid@3.3.11: {}
 
-  nanoid@5.1.7: {}
+  nanoid@5.1.9: {}
 
   normalize-path@3.0.0: {}
 

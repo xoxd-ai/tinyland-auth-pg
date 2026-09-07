@@ -1,6 +1,6 @@
 {
   "name": "@tummycrypt/tinyland-auth-pg",
-  "version": "0.2.4",
+  "version": "0.2.5",
   "type": "module",
   "packageManager": "pnpm@10.13.1",
   "license": "MIT",
@@ -12,9 +12,6 @@
   "repository": {
     "type": "git",
     "url": "git+https://github.com/tinyland-inc/tinyland-auth-pg.git"
-  },
-  "publishConfig": {
-    "access": "public"
   },
   "exports": {
     ".": {
@@ -58,34 +55,33 @@
     "!dist/**/*.js.map"
   ],
   "scripts": {
-    "build": "tsc",
-    "clean": "rm -rf dist",
-    "typecheck": "tsc --noEmit",
-    "test": "vitest run",
-    "test:unit": "vitest run",
-    "test:watch": "vitest watch",
-    "check:package": "publint",
-    "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate",
-    "db:push": "drizzle-kit push",
-    "prepublishOnly": "pnpm build && pnpm check:package"
+    "build": "just build",
+    "clean": "just clean",
+    "typecheck": "just typecheck",
+    "test": "just test",
+    "test:unit": "just test-unit",
+    "check:package": "just package-check",
+    "db:generate": "just db-generate",
+    "db:migrate": "just db-migrate",
+    "db:push": "just db-push",
+    "prepublishOnly": "just publish-guard"
   },
   "dependencies": {
     "@neondatabase/serverless": "^0.10.4",
     "drizzle-orm": "0.39.3",
     "pg": "^8.20.0"
   },
-  "peerDependencies": {
-    "@tummycrypt/tinyland-auth": "^0.2.0 || ^0.3.0"
-  },
   "devDependencies": {
-    "@tummycrypt/tinyland-auth": "^0.3.0",
     "@testcontainers/postgresql": "^11.14.0",
     "@types/node": "^22.0.0",
     "@types/pg": "^8.20.0",
+    "bcryptjs": "2.4.3",
     "drizzle-kit": "^0.30.5",
+    "nanoid": "5.1.9",
+    "otplib": "12.0.1",
     "postgres": "^3.4.9",
     "publint": "^0.3.18",
+    "qrcode": "1.5.4",
     "testcontainers": "^11.14.0",
     "typescript": "5.9.3",
     "vitest": "^4.0.18"

@@ -9,6 +9,7 @@
  * SKIPS automatically when no Docker/Podman runtime is discoverable.
  */
 
+import { randomUUID } from 'node:crypto';
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import {
 	PostgreSqlContainer,
@@ -125,6 +126,46 @@ describe.skipIf(!hasContainerRuntime())(
 
 			expect(usersA.every((u) => u.tenantId === TENANT_A)).toBe(true);
 			expect(usersB.every((u) => u.tenantId === TENANT_B)).toBe(true);
+		});
+
+		it('keeps expired reads non-mutating and reaps explicitly through postgres.js', async () => {
+			const db = drizzle(sql, { schema });
+			const adapter = createPgStorageAdapter({ db });
+			const tenantId = randomUUID();
+			const suffix = randomUUID().slice(0, 8);
+			const now = new Date().toISOString();
+			const user = await adapter.createUser(tenantId, {
+				handle: `expiry-${suffix}`,
+				email: `expiry-${suffix}@example.com`,
+				passwordHash: 'fixture-hash',
+				role: 'admin',
+				isActive: true,
+				needsOnboarding: false,
+				onboardingStep: 0,
+				totpEnabled: false,
+				createdAt: now,
+				updatedAt: now,
+			});
+			const session = await adapter.createSession(tenantId, user.id, user);
+			await sql`
+				update auth.sessions
+				   set expires = (now() at time zone 'utc') - interval '1 day',
+				       expires_at = (now() at time zone 'utc') - interval '1 day'
+				 where tenant_id = ${tenantId} and id = ${session.id}
+			`;
+
+			expect(await adapter.getSession(tenantId, session.id)).toBeNull();
+			const before = await sql`
+				select count(*)::int as count from auth.sessions
+				 where tenant_id = ${tenantId} and id = ${session.id}
+			`;
+			expect(before[0]!.count).toBe(1);
+			expect(await adapter.cleanupExpiredSessions(tenantId)).toBe(1);
+			const after = await sql`
+				select count(*)::int as count from auth.sessions
+				 where tenant_id = ${tenantId} and id = ${session.id}
+			`;
+			expect(after[0]!.count).toBe(0);
 		});
 	},
 );

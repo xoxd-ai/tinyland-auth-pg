@@ -1,0 +1,19 @@
+module(
+    name = "tin_2923_auth_pg_consumer_proof",
+    version = "0.0.0",
+)
+
+bazel_dep(name = "aspect_rules_js", version = "2.9.1")
+bazel_dep(name = "rules_nodejs", version = "6.7.3")
+bazel_dep(name = "tummycrypt_tinyland_auth", version = "0.3.3")
+bazel_dep(name = "tummycrypt_tinyland_auth_pg", version = "0.2.5")
+
+# The candidate is not in the immutable registry yet. Only the package under
+# test is overridden; auth must still resolve from its exact registry module.
+local_path_override(
+    module_name = "tummycrypt_tinyland_auth_pg",
+    path = __AUTH_PG_ROOT__,
+)
+
+node = use_extension("@rules_nodejs//nodejs:extensions.bzl", "node")
+node.toolchain(node_version = "22.13.1")

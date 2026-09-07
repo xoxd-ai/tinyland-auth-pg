@@ -1,4 +1,6 @@
-load("@aspect_rules_js//npm:defs.bzl", "npm_package")
+load("@aspect_bazel_lib//lib:jq.bzl", "jq")
+load("@aspect_rules_js//js:defs.bzl", "js_test")
+load("@aspect_rules_js//npm:defs.bzl", "npm_link_package", "npm_package")
 load("@aspect_rules_ts//ts:defs.bzl", "ts_project")
 load("@tummycrypt_tinyland_auth_pg_npm//:defs.bzl", "npm_link_all_packages")
 load("@tummycrypt_tinyland_auth_pg_npm//:vitest/package_json.bzl", vitest_bin = "bin")
@@ -6,6 +8,64 @@ load("@tummycrypt_tinyland_auth_pg_npm//:vitest/package_json.bzl", vitest_bin = 
 package(default_visibility = ["//visibility:public"])
 
 npm_link_all_packages(name = "node_modules")
+
+# The auth source/type edge is owned here and comes only from Bzlmod. Rewrap the
+# external package tree so Node resolves its runtime links from this consumer's
+# lock-derived stores instead of producer-local runfile paths.
+filegroup(
+    name = "tinyland_auth_registry_files",
+    srcs = ["@tummycrypt_tinyland_auth//:pkg"],
+)
+
+npm_package(
+    name = "tinyland_auth_registry_package",
+    srcs = [":tinyland_auth_registry_files"],
+    include_external_repositories = ["tummycrypt_tinyland_auth+"],
+    package = "@tummycrypt/tinyland-auth",
+    root_paths = ["pkg"],
+    version = "0.3.3",
+)
+
+npm_link_package(
+    name = "node_modules/@tummycrypt/tinyland-auth",
+    deps = {
+        ":.aspect_rules_js/node_modules/bcryptjs@2.4.3": "bcryptjs",
+        ":.aspect_rules_js/node_modules/nanoid@5.1.9": "nanoid",
+        ":.aspect_rules_js/node_modules/otplib@12.0.1": "otplib",
+        ":.aspect_rules_js/node_modules/qrcode@1.5.4": "qrcode",
+    },
+    src = ":tinyland_auth_registry_package",
+)
+
+AUTH_PG_NPM_DEPS = [
+    ":node_modules",
+    ":node_modules/@neondatabase/serverless",
+    ":node_modules/@tummycrypt/tinyland-auth",
+    ":node_modules/@types/node",
+    ":node_modules/@types/pg",
+    ":node_modules/drizzle-orm",
+    ":node_modules/pg",
+]
+
+PACKAGE_AUTHORITY_DATA = [
+    ":node_modules",
+    ":node_modules/vitest",
+    ".bazelrc",
+    ".github/workflows/ci.yml",
+    "BUILD.bazel",
+    "CHANGELOG.md",
+    "Justfile",
+    "MODULE.bazel",
+    "MODULE.bazel.lock",
+    "README.md",
+    "package.json",
+    "pnpm-lock.yaml",
+    "pnpm-workspace.yaml",
+    "src/__tests__/package-authority.test.ts",
+    "tests/bzlmod-consumer/BUILD.fixture",
+    "tests/bzlmod-consumer/MODULE.bazel.template",
+    "vitest.config.ts",
+]
 
 ts_project(
     name = "tinyland-auth-pg",
@@ -18,34 +78,99 @@ ts_project(
     transpiler = "tsc",
     tsconfig = "tsconfig.json",
     validate = False,
-    deps = [
-        ":node_modules",
-        ":node_modules/@neondatabase/serverless",
-        ":node_modules/@tummycrypt/tinyland-auth",
-        ":node_modules/@types/node",
-        ":node_modules/@types/pg",
-        ":node_modules/drizzle-orm",
-        ":node_modules/pg",
-    ],
+    deps = AUTH_PG_NPM_DEPS,
+)
+
+ts_project(
+    name = "typecheck",
+    srcs = glob(["src/**/*.ts"], exclude = ["src/__tests__/**"]),
+    declaration = False,
+    no_emit = True,
+    transpiler = "tsc",
+    tsconfig = "tsconfig.json",
+    validate = False,
+    deps = AUTH_PG_NPM_DEPS,
 )
 
 vitest_bin.vitest_test(
     name = "test",
-    args = ["run"],
+    args = [
+        "run",
+        "--exclude",
+        "src/__tests__/node-pg.test.ts",
+        "--exclude",
+        "src/__tests__/postgres-js.test.ts",
+    ],
     data = glob([
         "drizzle/**",
         "drizzle-public/**",
         "src/**/*.ts",
     ]) + [
         ":node_modules",
+        ":node_modules/@tummycrypt/tinyland-auth",
+        ".bazelrc",
+        "BUILD.bazel",
+        "Justfile",
+        "MODULE.bazel",
+        "MODULE.bazel.lock",
+        "package.json",
+        "pnpm-lock.yaml",
+        "pnpm-workspace.yaml",
         "tsconfig.json",
         "vitest.config.ts",
     ],
     log_level = "info",
 )
 
+# The database behavior proof is its own graph node. It may skip for a local
+# developer without a container runtime, but the remote validation target sets
+# AUTH_PG_INTEGRATION_REQUIRED and therefore fails closed if PostgreSQL cannot
+# actually be started.
+vitest_bin.vitest_test(
+    name = "integration_test",
+    args = [
+        "run",
+        "$(rootpath src/__tests__/node-pg.test.ts)",
+        "$(rootpath src/__tests__/postgres-js.test.ts)",
+    ],
+    data = glob([
+        "drizzle/**",
+        "drizzle-public/**",
+        "src/**/*.ts",
+    ]) + [
+        ":node_modules",
+        ":node_modules/@tummycrypt/tinyland-auth",
+        "tsconfig.json",
+        "vitest.config.ts",
+    ],
+    env = {"AUTH_PG_INTEGRATION_REQUIRED": "true"},
+    log_level = "info",
+)
+
+vitest_bin.vitest_test(
+    name = "package_authority_test",
+    args = [
+        "run",
+        "--config",
+        "$(rootpath vitest.config.ts)",
+        "$(rootpath src/__tests__/package-authority.test.ts)",
+    ],
+    data = PACKAGE_AUTHORITY_DATA,
+    log_level = "info",
+)
+
+jq(
+    name = "publish_package_json",
+    srcs = ["package.json"],
+    filter = ".peerDependencies = {\"@tummycrypt/tinyland-auth\": \"^0.3.0\"} | del(.devDependencies, .scripts)",
+    out = "package.publish.json",
+)
+
 npm_package(
     name = "pkg",
+    data = [
+        ":node_modules/@tummycrypt/tinyland-auth",
+    ],
     srcs = glob([
         "drizzle/**",
         "drizzle-public/**",
@@ -53,8 +178,26 @@ npm_package(
         ":tinyland-auth-pg",
         "CHANGELOG.md",
         "README.md",
-        "package.json",
+        ":publish_package_json",
     ],
     package = "@tummycrypt/tinyland-auth-pg",
-    version = "0.2.4",
+    replace_prefixes = {
+        "package.publish.json": "package.json",
+    },
+    version = "0.2.5",
+)
+
+js_test(
+    name = "package_artifact_test",
+    entry_point = "tests/package-artifact.test.mjs",
+    args = ["$(rootpath :pkg)"],
+    data = [":pkg"] + AUTH_PG_NPM_DEPS,
+)
+
+js_test(
+    name = "auth_runtime_link_test",
+    entry_point = "tests/auth-runtime-link.test.mjs",
+    data = [
+        ":node_modules/@tummycrypt/tinyland-auth",
+    ],
 )
