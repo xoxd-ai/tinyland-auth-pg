@@ -28,7 +28,7 @@
         checks.default = pkgs.tinyland-auth-pg;
 
         devShells.default = pkgs.mkShell {
-          buildInputs = with pkgs; [ bazel_8 nodejs_22 (pnpm_10 or pnpm) ];
+          buildInputs = with pkgs; [ bazel_8 nodejs_22 (pkgs.pnpm_10 or pkgs.pnpm) ];
           shellHook = ''
             echo "tinyland-auth-pg dev shell"
             echo "  node $(node --version)"

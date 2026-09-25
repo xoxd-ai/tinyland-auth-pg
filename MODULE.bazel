@@ -1,6 +1,6 @@
 module(
     name = "tummycrypt_tinyland_auth_pg",
-    version = "0.2.4",
+    version = "0.3.0",
     compatibility_level = 1,
 )
 

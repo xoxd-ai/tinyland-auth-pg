@@ -32,3 +32,4 @@ export * as contentSchema from './content-schema.js';
 export * as bookingSchema from './booking-schema.js';
 export * as giftcertSchema from './giftcert-schema.js';
 export * as intakeSchema from './intake-schema.js';
+export * as billingSchema from './billing-schema.js';
