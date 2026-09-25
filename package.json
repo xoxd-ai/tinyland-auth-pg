@@ -1,6 +1,6 @@
 {
   "name": "@tummycrypt/tinyland-auth-pg",
-  "version": "0.2.4",
+  "version": "0.3.0",
   "type": "module",
   "packageManager": "pnpm@10.13.1",
   "license": "MIT",
@@ -48,6 +48,10 @@
     "./intake-schema": {
       "types": "./dist/intake-schema.d.ts",
       "import": "./dist/intake-schema.js"
+    },
+    "./billing-schema": {
+      "types": "./dist/billing-schema.d.ts",
+      "import": "./dist/billing-schema.js"
     }
   },
   "files": [

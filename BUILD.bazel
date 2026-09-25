@@ -38,6 +38,10 @@ vitest_bin.vitest_test(
         "src/**/*.ts",
     ]) + [
         ":node_modules",
+        # package-authority.test.ts reads the three version authorities.
+        "BUILD.bazel",
+        "MODULE.bazel",
+        "package.json",
         "tsconfig.json",
         "vitest.config.ts",
     ],
@@ -56,5 +60,5 @@ npm_package(
         "package.json",
     ],
     package = "@tummycrypt/tinyland-auth-pg",
-    version = "0.2.4",
+    version = "0.3.0",
 )

@@ -124,11 +124,56 @@ The package exports six Drizzle schema modules, each targeting a specific domain
 | `./booking-schema` | `public` | clients, bookings, time_blocks, business_hours_overrides, slot_reservations | Scheduling and appointments |
 | `./giftcert-schema` | `public` | gift_certificates, gift_certificate_redemptions | Gift certificate tracking |
 | `./intake-schema` | `public` | intake_submissions | Patient intake forms |
+| `./billing-schema` | `billing` | owner_accounts, tenants, tenant_members | The billing entity: owner accounts, paying tenants, members |
 | `./business-schema` | `public` | (composite re-export) | Business domain aggregation |
+
+### Billing Schema (`billing.*`)
+
+The billing entity of the platform payments architecture (finances
+`docs/agent-notes/2026-09-24-platform-payments-architecture.md`, section 4.1).
+
+- **owner_accounts** -- one row per Stripe account and merchant of record:
+  `id` (the finances `owner_account_id`), `entity_slug`, `display_name`,
+  `stripe_account_id` (unique, nullable), `stripe_mode` (`live` or `test`).
+- **tenants** -- a paying client keyed 1:1 to a Stripe customer inside one
+  owner account (`kind: client`), or the owner account's own rollup tenant
+  (`kind: owner`): `id` (the RLS tenant UUID, set by the publisher), `slug`
+  (unique; the unified host's path segment), `owner_account_id`, `client_id`,
+  `stripe_customer_id` (unique, and unique per owner account).
+- **tenant_members** -- an email (stored lowercased) and a role
+  (`client_viewer`, `client_admin` or `operator`) per tenant; the Access list
+  is generated from these rows.
+
+Every row carries `status`, `source` and `published_at`. The tables are a
+projection: the only writer is `reconcile tenants-publish`, and the consuming
+app grants its runtime role SELECT only.
+
+Row-level security is enabled and forced on all three tables, deny by default.
+Set the session settings inside the request's transaction:
+
+```typescript
+await sql.begin(async (tx) => {
+  // Before a tenant is chosen: the verified Access email.
+  await tx`SELECT set_config('app.member_email', ${email}, true)`;
+  // Once the request is scoped to one tenant:
+  await tx`SELECT set_config('app.tenant_id', ${tenantId}, true)`;
+  // ...
+});
+```
+
+A session sees a tenant when it is the scoped tenant or one the email belongs
+to, a membership when it belongs to the scoped tenant or to the email, and an
+owner account when a tenant it sees belongs to it. With neither setting set,
+every billing table reads empty. Writes are confined to the scoped tenant
+(owner accounts, which precede their tenants, are gated by the grants alone).
 
 ### Auth Schema (`auth.*`)
 
 - **users** -- Admin users with roles (viewer, editor, business_owner, developer), PIN hashes, TOTP state, onboarding tracking
+
+The four `auth.users` role values above are an admin vocabulary. The client
+billing portal does not use them: portal access is decided by
+`billing.tenant_members.role` (below).
 - **sessions** -- DB-backed sessions with HMAC-signed UUIDs, metadata (IP, user agent), configurable TTL
 - **totp_secrets** -- AES-encrypted TOTP secrets, linked to users
 - **backup_codes** -- Bcrypt-hashed one-time recovery codes
