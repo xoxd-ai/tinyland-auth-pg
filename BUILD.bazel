@@ -1,4 +1,12 @@
-load("@aspect_rules_js//npm:defs.bzl", "npm_package")
+"""
+BUILD.bazel for @tummycrypt/tinyland-auth-pg.
+
+  Bazel:      bazel build //:pkg //:typecheck && bazel test //...
+  Consumers:  bazel_dep(name = "tummycrypt_tinyland_auth_pg", version = "1.0.0")
+              from xoxd-ai/bazel-registry; the package is not published to npm.
+"""
+
+load("@aspect_rules_js//npm:defs.bzl", "npm_link_package", "npm_package")
 load("@aspect_rules_ts//ts:defs.bzl", "ts_project")
 load("@tummycrypt_tinyland_auth_pg_npm//:defs.bzl", "npm_link_all_packages")
 load("@tummycrypt_tinyland_auth_pg_npm//:vitest/package_json.bzl", vitest_bin = "bin")
@@ -7,9 +15,32 @@ package(default_visibility = ["//visibility:public"])
 
 npm_link_all_packages(name = "node_modules")
 
+# First-party deps resolved through the Bazel module graph (RU6). The auth
+# package's own runtime deps (bcryptjs, nanoid, otplib, qrcode) are devDeps
+# here so Node's hoisted lookup finds them from the linked package.
+npm_link_package(
+    name = "node_modules/@tummycrypt/tinyland-auth",
+    src = "@tummycrypt_tinyland_auth//:pkg",
+)
+
+_LIB_SRCS = glob(
+    ["src/**/*.ts"],
+    exclude = ["src/__tests__/**"],
+) + ["package.json"]
+
+_LIB_DEPS = [
+    ":node_modules",
+    ":node_modules/@neondatabase/serverless",
+    ":node_modules/@tummycrypt/tinyland-auth",
+    ":node_modules/@types/node",
+    ":node_modules/@types/pg",
+    ":node_modules/drizzle-orm",
+    ":node_modules/pg",
+]
+
 ts_project(
     name = "tinyland-auth-pg",
-    srcs = glob(["src/**/*.ts"], exclude = ["src/__tests__/**"]),
+    srcs = _LIB_SRCS,
     declaration = True,
     declaration_map = True,
     out_dir = "dist",
@@ -18,15 +49,19 @@ ts_project(
     transpiler = "tsc",
     tsconfig = "tsconfig.json",
     validate = False,
-    deps = [
-        ":node_modules",
-        ":node_modules/@neondatabase/serverless",
-        ":node_modules/@tummycrypt/tinyland-auth",
-        ":node_modules/@types/node",
-        ":node_modules/@types/pg",
-        ":node_modules/drizzle-orm",
-        ":node_modules/pg",
-    ],
+    deps = _LIB_DEPS,
+)
+
+# TypeScript 7.0.2 type check of the library sources (no emit).
+ts_project(
+    name = "typecheck",
+    srcs = _LIB_SRCS,
+    declaration = False,
+    no_emit = True,
+    transpiler = "tsc",
+    tsconfig = "tsconfig.json",
+    validate = False,
+    deps = _LIB_DEPS,
 )
 
 vitest_bin.vitest_test(
@@ -38,6 +73,7 @@ vitest_bin.vitest_test(
         "src/**/*.ts",
     ]) + [
         ":node_modules",
+        ":node_modules/@tummycrypt/tinyland-auth",
         # package-authority.test.ts reads the three version authorities.
         "BUILD.bazel",
         "MODULE.bazel",
@@ -60,5 +96,5 @@ npm_package(
         "package.json",
     ],
     package = "@tummycrypt/tinyland-auth-pg",
-    version = "0.3.0",
+    version = "1.0.0",
 )

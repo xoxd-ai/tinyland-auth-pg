@@ -12,22 +12,29 @@ permissions:
   contents: read
   packages: read
 
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
 jobs:
   package:
-    uses: xoxd-ai/ci-templates/.github/workflows/js-bazel-package.yml@v2.14.1
+    uses: xoxd-ai/ci-templates/.github/workflows/js-bazel-package.yml@v3.2.1
     with:
       runner_mode: repo_owned
       runner_labels_json: ${{ vars.PRIMARY_LINUX_RUNNER_LABELS_JSON }}
       workspace_mode: isolated
-      publish_mode: hosted_exception
       node_versions: '["22"]'
       publish_node_version: "22"
       pnpm_version: "10.13.1"
-      typecheck_command: pnpm typecheck
-      unit_test_command: pnpm test:unit
-      build_command: pnpm build
-      package_check_command: pnpm check:package
-      bazel_targets: "//:pkg //:test"
+      # Validation only (RU8: the Bazel module is the sole delivery path; no
+      # npm or GitHub Packages publication). @tummycrypt/tinyland-auth resolves
+      # only through the Bazel module graph, so every check runs through Bazel;
+      # //:typecheck is the TypeScript 7.0.2 check.
+      typecheck_command: "npx --yes @bazel/bazelisk build //:typecheck --config=ci"
+      unit_test_command: "npx --yes @bazel/bazelisk test //:test --config=ci --test_output=errors"
+      build_command: "npx --yes @bazel/bazelisk build //:pkg --config=ci"
+      package_check_command: "npx --yes @bazel/bazelisk build //:pkg --config=ci && npx --yes publint@0.3.25 ./bazel-bin/pkg"
+      bazel_targets: "//:pkg //:typecheck //:test"
       package_dir: ./bazel-bin/pkg
       npm_access: public
       npm_publish_mode: disabled

@@ -58,8 +58,8 @@ export type Database =
 /**
  * Domain objects from `@tummycrypt/tinyland-auth/types` don't natively carry
  * `tenantId`. We widen locally so the adapter can surface the column without
- * a breaking cross-repo change. A follow-up `@tummycrypt/tinyland-auth@0.3.0`
- * will remove the need for this wrapper.
+ * a breaking cross-repo change. `@tummycrypt/tinyland-auth` 1.1.0 still has
+ * no tenant-aware types, so the wrapper stays.
  */
 export type TenantScoped<T> = T & { tenantId: string };
 
@@ -215,13 +215,26 @@ const toAuditEvent = (row: AuditRow): TenantScoped<AuditEvent> => ({
 // ---------------------------------------------------------------------------
 
 /**
+ * `@tummycrypt/tinyland-auth` 1.x made `email` optional on users and
+ * invitations, but `auth.users.email` and `auth.invitations.email` are
+ * NOT NULL. Fail at the adapter boundary with a clear message instead of a
+ * Postgres constraint error.
+ */
+function requireEmail(email: string | undefined, what: string): string {
+  if (typeof email !== 'string' || email.trim() === '') {
+    throw new Error(`tinyland-auth-pg: ${what} requires an email (the column is NOT NULL)`);
+  }
+  return email;
+}
+
+/**
  * PgStorageAdapter — driver-agnostic, tenant-scoped.
  *
  * NOTE (v0.2.0): this class no longer implements `IStorageAdapter` from
  * `@tummycrypt/tinyland-auth/storage`. That interface's method signatures
  * (e.g. `getUser(id)`) are incompatible with Pattern B (`getUser(tenantId, id)`).
- * A follow-up `@tummycrypt/tinyland-auth@0.3.0` will ship a tenant-aware
- * interface and this adapter will implement it then.
+ * `@tummycrypt/tinyland-auth` 1.1.0 still has no tenant-aware interface, so the
+ * concrete class remains the contract.
  */
 export class PgStorageAdapter {
   // Narrow to NeonHttpDatabase internally — runtime is compatible across drivers
@@ -329,7 +342,7 @@ export class PgStorageAdapter {
         id,
         tenantId,
         handle: user.handle.toLowerCase(),
-        email: user.email.toLowerCase(),
+        email: requireEmail(user.email, 'createUser').toLowerCase(),
         displayName: user.displayName,
         passwordHash: user.passwordHash,
         role: user.role,
@@ -785,7 +798,7 @@ export class PgStorageAdapter {
         id,
         tenantId,
         token: invitation.token,
-        email: invitation.email,
+        email: requireEmail(invitation.email, 'createInvitation'),
         role: invitation.role,
         createdBy: invitation.createdBy,
         isActive: invitation.isActive,

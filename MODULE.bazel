@@ -1,15 +1,19 @@
 module(
     name = "tummycrypt_tinyland_auth_pg",
-    version = "0.3.0",
+    version = "1.0.0",
     compatibility_level = 1,
 )
 
 bazel_dep(name = "aspect_bazel_lib", version = "2.22.5")
 bazel_dep(name = "aspect_rules_js", version = "2.9.1")
-bazel_dep(name = "aspect_rules_ts", version = "3.8.4")
+bazel_dep(name = "aspect_rules_ts", version = "3.10.1")
 bazel_dep(name = "bazel_skylib", version = "1.8.2")
 bazel_dep(name = "platforms", version = "1.0.0")
 bazel_dep(name = "rules_nodejs", version = "6.7.3")
+
+# Inter-module dependencies (RU6: in-house packages come only from
+# xoxd-ai/bazel-registry, never from npm).
+bazel_dep(name = "tummycrypt_tinyland_auth", version = "1.1.0")
 
 node = use_extension("@rules_nodejs//nodejs:extensions.bzl", "node")
 node.toolchain(node_version = "22.13.1")
@@ -32,6 +36,9 @@ npm.npm_translate_lock(
 )
 use_repo(npm, "tummycrypt_tinyland_auth_pg_npm")
 
-rules_ts_ext = use_extension("@aspect_rules_ts//ts:extensions.bzl", "ext")
-rules_ts_ext.deps(ts_version = "5.9.3")
-use_repo(rules_ts_ext, "npm_typescript")
+# TypeScript 7.0.2 (native compiler) per RU1/RU13. rules_ts >= 3.9.0 knows the
+# native package integrities; ts_project must set transpiler = "tsc". The root
+# module's tag wins over tinyland_auth 1.1.0's legacy 5.9.3 request.
+typescript = use_extension("@aspect_rules_ts//ts:extensions.bzl", "typescript")
+typescript.deps(version = "7.0.2")
+use_repo(typescript, "npm_typescript")

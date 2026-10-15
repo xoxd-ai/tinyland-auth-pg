@@ -1,20 +1,17 @@
 {
   "name": "@tummycrypt/tinyland-auth-pg",
-  "version": "0.3.0",
+  "version": "1.0.0",
   "type": "module",
   "packageManager": "pnpm@10.13.1",
   "license": "MIT",
   "description": "PostgreSQL storage adapter for @tummycrypt/tinyland-auth",
-  "homepage": "https://github.com/tinyland-inc/tinyland-auth-pg",
+  "homepage": "https://github.com/xoxd-ai/tinyland-auth-pg",
   "bugs": {
-    "url": "https://github.com/tinyland-inc/tinyland-auth-pg/issues"
+    "url": "https://github.com/xoxd-ai/tinyland-auth-pg/issues"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/tinyland-inc/tinyland-auth-pg.git"
-  },
-  "publishConfig": {
-    "access": "public"
+    "url": "git+https://github.com/xoxd-ai/tinyland-auth-pg.git"
   },
   "exports": {
     ".": {
@@ -71,27 +68,31 @@
     "check:package": "publint",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
-    "db:push": "drizzle-kit push",
-    "prepublishOnly": "pnpm build && pnpm check:package"
+    "db:push": "drizzle-kit push"
   },
   "dependencies": {
     "@neondatabase/serverless": "^0.10.4",
     "drizzle-orm": "0.39.3",
     "pg": "^8.20.0"
   },
-  "peerDependencies": {
-    "@tummycrypt/tinyland-auth": "^0.2.0 || ^0.3.0"
-  },
   "devDependencies": {
-    "@tummycrypt/tinyland-auth": "^0.3.0",
     "@testcontainers/postgresql": "^11.14.0",
-    "@types/node": "^22.0.0",
+    "@types/node": "^22.20.5",
     "@types/pg": "^8.20.0",
+    "bcryptjs": "^3.0.3",
     "drizzle-kit": "^0.30.5",
+    "nanoid": "^5.0.7",
+    "otplib": "^13.4.1",
     "postgres": "^3.4.9",
-    "publint": "^0.3.18",
+    "publint": "^0.3.25",
+    "qrcode": "^1.5.3",
     "testcontainers": "^11.14.0",
-    "typescript": "5.9.3",
-    "vitest": "^4.0.18"
+    "typescript": "7.0.2",
+    "vite": "8.3.3",
+    "vitest": "5.0.3"
+  },
+  "private": true,
+  "engines": {
+    "node": ">=22.12.0"
   }
 }
