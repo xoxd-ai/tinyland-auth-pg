@@ -1,6 +1,6 @@
 # @tummycrypt/tinyland-auth-pg
 
-PostgreSQL storage adapter for [@tummycrypt/tinyland-auth](https://github.com/Jesssullivan/tinyland-auth), backed by [Drizzle ORM](https://orm.drizzle.team) with driver-agnostic construction and multi-tenant scoping.
+PostgreSQL storage adapter for [@tummycrypt/tinyland-auth](https://github.com/xoxd-ai/tinyland-auth), backed by [Drizzle ORM](https://orm.drizzle.team) with driver-agnostic construction and multi-tenant scoping.
 
 Supports Neon HTTP, `postgres.js`, and `node-postgres`. Use `createNodePgStorageAdapter()`
 when you want the package to own a `pg.Pool`, or `createPgStorageAdapter({ db })`
@@ -12,17 +12,35 @@ when you already have a pre-built Drizzle client.
 
 ## Installation
 
-```bash
-npm install @tummycrypt/tinyland-auth-pg
-# or
-pnpm add @tummycrypt/tinyland-auth-pg
+From 1.0.0 this package is distributed only as a Bazel module from
+[xoxd-ai/bazel-registry](https://github.com/xoxd-ai/bazel-registry). It is not
+published to npm; the npmjs and GitHub Packages versions (0.2.x) are legacy.
+
+```starlark
+# MODULE.bazel
+bazel_dep(name = "tummycrypt_tinyland_auth_pg", version = "1.0.0")
 ```
 
-### Peer Dependencies
+```starlark
+# BUILD.bazel
+load("@aspect_rules_js//npm:defs.bzl", "npm_link_package")
 
-```bash
-npm install @tummycrypt/tinyland-auth
+npm_link_package(
+    name = "node_modules/@tummycrypt/tinyland-auth-pg",
+    src = "@tummycrypt_tinyland_auth_pg//:pkg",
+)
+
+npm_link_package(
+    name = "node_modules/@tummycrypt/tinyland-auth",
+    src = "@tummycrypt_tinyland_auth//:pkg",
+)
 ```
+
+The module depends on `tummycrypt_tinyland_auth` (1.1.0 or newer through
+Bazel's minimal version selection), so the auth module is already in your
+graph; link it as shown. `drizzle-orm`, `pg` and `@neondatabase/serverless`
+remain ordinary npm dependencies and must be present in the consuming app's
+lockfile.
 
 ## Quick Start (0.2.0+)
 
@@ -316,10 +334,9 @@ Every method accepts `tenantId: string` as its **first parameter** and returns
 - `getAuditEvents(tenantId, filters?): Promise<AuditEvent[]>`
 
 > **Interface note:** the class does not `implements IStorageAdapter` from
-> `@tummycrypt/tinyland-auth@0.2.x` because the peer package predates Pattern B.
-> An interface uplift will ship with tinyland-auth 0.3.0 and this adapter will
-> re-implement it then. Until then, consume the concrete class or type against
-> the exported method signatures directly.
+> `@tummycrypt/tinyland-auth`: every method here takes `tenantId` first
+> (Pattern B), while the auth interface is single-tenant. Consume the concrete
+> class, or type against the exported method signatures directly.
 
 ### `NodePgStorageAdapter`
 
@@ -334,17 +351,22 @@ that pool by default when `adapter.close()` is called.
 
 ## Development
 
+Bazel is the build and test authority (the in-house `@tummycrypt/tinyland-auth`
+dependency resolves only through the Bazel module graph):
+
 ```bash
-pnpm install
-pnpm test          # Run tests
-pnpm build         # Compile TypeScript
-pnpm test:watch    # Watch mode
+bazel build //:pkg //:typecheck   # TypeScript 7.0.2 build and type check
+bazel test //...                  # vitest 5 suite
 ```
+
+`pnpm install` still provisions third-party tooling (drizzle-kit for the
+`db:*` scripts). A plain `pnpm typecheck` / `pnpm test` cannot resolve
+`@tummycrypt/tinyland-auth` and is not supported.
 
 ### Nix
 
 ```bash
-nix develop        # Enter dev shell with Node 20 + pnpm + tsc
+nix develop        # Enter dev shell with Node + pnpm + tsc
 ```
 
 ## License

@@ -1,4 +1,6 @@
 common --enable_bzlmod
+common --registry=https://raw.githubusercontent.com/xoxd-ai/bazel-registry/main
+common --registry=https://bcr.bazel.build
 
 build --jobs=auto
 build --worker_sandboxing

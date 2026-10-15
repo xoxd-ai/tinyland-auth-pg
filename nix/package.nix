@@ -38,7 +38,7 @@ in pkgs.stdenv.mkDerivation {
 
   meta = with lib; {
     description = "PostgreSQL storage adapter for @tummycrypt/tinyland-auth";
-    homepage = "https://github.com/tinyland-inc/tinyland-auth-pg";
+    homepage = "https://github.com/xoxd-ai/tinyland-auth-pg";
     license = licenses.mit;
     maintainers = [ ];
     platforms = platforms.unix;

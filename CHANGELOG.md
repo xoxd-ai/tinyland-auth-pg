@@ -2,7 +2,59 @@
 
 All notable changes to `@tummycrypt/tinyland-auth-pg` will be documented here.
 Format loosely follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
-this package uses pre-1.0 semver where **breaking changes bump the minor**.
+this package follows semver from 1.0.0; before 1.0.0, breaking changes bumped the minor.
+
+## [1.0.0] - 2026-10-15
+
+Stack uplift and Bazel-only distribution (uplift wave U2; rulings RU1, RU5,
+RU6, RU8, RU10, RU13). 0.3.0 below was never tagged or registered, so 1.0.0 is
+the first release that carries the billing schema; the last registered version
+is 0.2.4.
+
+### Breaking
+
+- **Bazel-only distribution.** The package is `private` and is no longer
+  published to npmjs or GitHub Packages. Consume it with
+  `bazel_dep(name = "tummycrypt_tinyland_auth_pg", version = "1.0.0")` from
+  xoxd-ai/bazel-registry and link `@tummycrypt_tinyland_auth_pg//:pkg` with
+  `npm_link_package` (see the README). The `publish.yml` workflow is removed.
+- **`@tummycrypt/tinyland-auth` 1.1.0.** The auth package now comes from the
+  Bazel module graph (`bazel_dep tummycrypt_tinyland_auth 1.1.0`) instead of an
+  npm peer. The `peerDependencies` entry (`^0.2.0 || ^0.3.0`) is gone; a
+  consumer gets auth 1.1.0 or newer through minimal version selection. Auth
+  1.0.0 removed its TOTP test bypasses; see its `docs/migration-1.0.md`.
+- **Email is required at the adapter boundary.** Auth 1.x made
+  `AdminUser.email` and `AdminInvitation.email` optional, but `auth.users.email`
+  and `auth.invitations.email` stay `NOT NULL`. `createUser` and
+  `createInvitation` now throw a clear error when the email is missing,
+  instead of failing inside Postgres. No schema change.
+- **Toolchain.** TypeScript 7.0.2, vite 8.3.3 and vitest 5.0.3, pinned exact
+  (RU5); `aspect_rules_ts` 3.10.1 with the `typescript` extension at 7.0.2.
+  Node 22.12 or newer (`engines`). Declarations are emitted by TS 7; apart from
+  the 0.3.0 billing exports, the public API is unchanged from 0.2.4.
+
+### Migration (all consumers)
+
+1. Replace the npm dependency on `@tummycrypt/tinyland-auth-pg` with
+   `bazel_dep(name = "tummycrypt_tinyland_auth_pg", version = "1.0.0")` and an
+   `npm_link_package` for `@tummycrypt_tinyland_auth_pg//:pkg`.
+2. Move `@tummycrypt/tinyland-auth` to 1.1.0 or newer through Bazel as well
+   (`npm_link_package` of `@tummycrypt_tinyland_auth//:pkg`), and apply the
+   auth 1.0 migration notes.
+3. Keep `drizzle-orm` (0.39.3), `pg` and `@neondatabase/serverless` in the
+   app's own lockfile.
+4. Make sure every `createUser` / `createInvitation` call passes an email.
+5. Database: nothing changes for the `auth.*` and `public.*` tables. Coming
+   from 0.2.4, `drizzle/0001_billing_entity.sql` (the 0.3.0 billing schema,
+   below) is new; apply it with your usual drizzle-kit migrate step. It only
+   creates the `billing` schema and its tables, with row-level security.
+
+### Known gap
+
+- Auth 1.1.0 added `AdminUser.lastUsedTotpStep` (TOTP replay tracking). Auth's
+  own file storage persists it; this adapter has no column for it, so the
+  value is not stored. Replay protection that relies on it is not available on
+  Postgres storage yet.
 
 ## [0.3.0] - 2026-09-25
 

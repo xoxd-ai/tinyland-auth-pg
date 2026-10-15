@@ -407,3 +407,56 @@ describe('driver injection', () => {
 		expect(adapter).toBeInstanceOf(PgStorageAdapter);
 	});
 });
+
+describe('email at the adapter boundary (tinyland-auth 1.x)', () => {
+	// tinyland-auth 1.x made AdminUser.email and AdminInvitation.email optional;
+	// auth.users.email and auth.invitations.email stay NOT NULL, so the adapter
+	// rejects a missing email before any query runs.
+	const makeAdapter = async () => {
+		const { drizzle: drizzlePgJs } = await import('drizzle-orm/postgres-js');
+		const schema = await import('../schema.js');
+		const { createPgStorageAdapter } = await import('../adapter.js');
+		const queries: string[] = [];
+		const mockSql: any = () => [];
+		mockSql.unsafe = (query: string) => {
+			queries.push(query);
+			return Promise.resolve([]);
+		};
+		mockSql.options = { parsers: {}, serializers: {} };
+		return { adapter: createPgStorageAdapter({ db: drizzlePgJs(mockSql, { schema }) }), queries };
+	};
+
+	it('createUser throws without an email and issues no query', async () => {
+		const { adapter, queries } = await makeAdapter();
+		await expect(
+			adapter.createUser(TEST_TENANT_ID, {
+				handle: 'noemail',
+				displayName: 'No Email',
+				passwordHash: 'x',
+				role: 'viewer',
+				isActive: true,
+				needsOnboarding: false,
+				onboardingStep: 0,
+				totpEnabled: false,
+				createdAt: '2026-10-15T00:00:00Z',
+			} as any),
+		).rejects.toThrow(/createUser requires an email/);
+		expect(queries).toEqual([]);
+	});
+
+	it('createInvitation throws on a blank email and issues no query', async () => {
+		const { adapter, queries } = await makeAdapter();
+		await expect(
+			adapter.createInvitation(TEST_TENANT_ID, {
+				token: 't',
+				email: '  ',
+				role: 'viewer',
+				createdBy: 'u',
+				isActive: true,
+				expiresAt: '2026-10-22T00:00:00Z',
+				createdAt: '2026-10-15T00:00:00Z',
+			} as any),
+		).rejects.toThrow(/createInvitation requires an email/);
+		expect(queries).toEqual([]);
+	});
+});
